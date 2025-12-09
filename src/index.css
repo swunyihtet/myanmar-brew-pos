@@ -2,95 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Warm Coffee Shop Palette */
+    --background: 35 30% 97%;
+    --foreground: 25 30% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 35 25% 99%;
+    --card-foreground: 25 30% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 35 25% 99%;
+    --popover-foreground: 25 30% 12%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Rich Coffee Brown */
+    --primary: 25 65% 25%;
+    --primary-foreground: 35 30% 97%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Cream */
+    --secondary: 35 35% 92%;
+    --secondary-foreground: 25 30% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Warm Gray */
+    --muted: 30 15% 90%;
+    --muted-foreground: 25 15% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Amber Accent */
+    --accent: 35 85% 55%;
+    --accent-foreground: 25 30% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Success Green */
+    --success: 142 70% 35%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    /* Warning Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 25 30% 12%;
 
-    --sidebar-background: 0 0% 98%;
+    --border: 30 20% 85%;
+    --input: 30 20% 88%;
+    --ring: 25 65% 35%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --radius: 0.75rem;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Custom POS Variables */
+    --pos-sidebar: 25 25% 15%;
+    --pos-sidebar-foreground: 35 30% 95%;
+    --pos-cart: 35 25% 99%;
+    --pos-cart-header: 25 30% 20%;
+    
+    /* Receipt */
+    --receipt-bg: 0 0% 100%;
+    --receipt-text: 0 0% 5%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 25 25% 15%;
+    --sidebar-foreground: 35 30% 95%;
+    --sidebar-primary: 35 85% 55%;
+    --sidebar-primary-foreground: 25 30% 12%;
+    --sidebar-accent: 25 30% 22%;
+    --sidebar-accent-foreground: 35 30% 95%;
+    --sidebar-border: 25 20% 25%;
+    --sidebar-ring: 35 85% 55%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 25 25% 10%;
+    --foreground: 35 30% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 25 22% 14%;
+    --card-foreground: 35 30% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 25 22% 14%;
+    --popover-foreground: 35 30% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 35 85% 55%;
+    --primary-foreground: 25 30% 10%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 25 20% 20%;
+    --secondary-foreground: 35 30% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 25 18% 18%;
+    --muted-foreground: 30 15% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 35 85% 55%;
+    --accent-foreground: 25 30% 10%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 25 30% 12%;
+
+    --border: 25 18% 22%;
+    --input: 25 18% 22%;
+    --ring: 35 85% 55%;
+
+    --pos-sidebar: 25 25% 8%;
+    --pos-sidebar-foreground: 35 30% 95%;
+    --pos-cart: 25 22% 14%;
+    --pos-cart-header: 35 30% 95%;
+
+    --sidebar-background: 25 25% 8%;
+    --sidebar-foreground: 35 30% 95%;
+    --sidebar-primary: 35 85% 55%;
+    --sidebar-primary-foreground: 25 30% 10%;
+    --sidebar-accent: 25 20% 15%;
+    --sidebar-accent-foreground: 35 30% 95%;
+    --sidebar-border: 25 18% 18%;
+    --sidebar-ring: 35 85% 55%;
   }
 }
 
@@ -100,6 +126,220 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', sans-serif;
   }
+
+  h1, h2, h3 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  /* Large Touch Buttons */
+  .btn-touch {
+    @apply min-h-[56px] min-w-[56px] text-lg font-medium transition-all duration-150 active:scale-95;
+  }
+
+  .btn-touch-sm {
+    @apply min-h-[44px] min-w-[44px] text-base font-medium transition-all duration-150 active:scale-95;
+  }
+
+  /* Category Pills */
+  .category-pill {
+    @apply px-5 py-3 rounded-full font-medium transition-all duration-200 cursor-pointer;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  .category-pill-active {
+    @apply bg-primary text-primary-foreground shadow-lg;
+  }
+
+  /* Product Cards */
+  .product-card {
+    @apply bg-card rounded-xl border border-border/50 overflow-hidden cursor-pointer;
+    @apply transition-all duration-200 hover:shadow-lg hover:border-primary/30 active:scale-[0.98];
+  }
+
+  /* Cart Item */
+  .cart-item {
+    @apply p-3 bg-secondary/30 rounded-lg transition-colors hover:bg-secondary/50;
+  }
+
+  /* Modifier Chip */
+  .modifier-chip {
+    @apply px-4 py-2.5 rounded-lg font-medium text-sm transition-all cursor-pointer;
+    @apply bg-secondary text-secondary-foreground border-2 border-transparent;
+    @apply hover:border-primary/30;
+  }
+
+  .modifier-chip-active {
+    @apply bg-primary text-primary-foreground border-primary shadow-md;
+  }
+
+  /* Status Badges */
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide;
+  }
+
+  .status-paid {
+    @apply bg-warning/20 text-warning;
+  }
+
+  .status-progress {
+    @apply bg-primary/20 text-primary;
+  }
+
+  .status-ready {
+    @apply bg-success/20 text-success;
+  }
+
+  .status-completed {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* Quantity Controls */
+  .qty-btn {
+    @apply w-9 h-9 rounded-full flex items-center justify-center font-bold;
+    @apply bg-secondary text-secondary-foreground transition-all;
+    @apply hover:bg-primary hover:text-primary-foreground active:scale-90;
+  }
+
+  /* POS Layout */
+  .pos-container {
+    @apply h-screen flex overflow-hidden bg-background;
+  }
+
+  .pos-sidebar {
+    @apply w-20 bg-pos-sidebar text-pos-sidebar-foreground flex flex-col items-center py-4;
+  }
+
+  .pos-main {
+    @apply flex-1 flex flex-col overflow-hidden;
+  }
+
+  .pos-cart {
+    @apply w-96 bg-pos-cart border-l border-border flex flex-col;
+  }
+}
+
+/* Receipt Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible;
+  }
+
+  .receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 3mm;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: black;
+    background: white;
+  }
+
+  .receipt-print .receipt-header {
+    text-align: center;
+    border-bottom: 1px dashed black;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .receipt-print .receipt-items {
+    border-bottom: 1px dashed black;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .receipt-print .receipt-modifier {
+    padding-left: 12px;
+    font-size: 11px;
+    color: #333;
+  }
+
+  .receipt-print .receipt-totals {
+    margin-top: 8px;
+  }
+
+  .receipt-print .receipt-footer {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 11px;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
 }
