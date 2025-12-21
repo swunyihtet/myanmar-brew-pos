@@ -10,7 +10,7 @@ interface CheckoutModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   total: number;
-  onConfirmPayment: (method: PaymentMethod, paidAmount?: number) => Order;
+  onConfirmPayment: (method: PaymentMethod, paidAmount?: number) => Promise<Order> | Order;
 }
 
 const paymentMethods: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
@@ -25,14 +25,22 @@ export function CheckoutModal({ open, onOpenChange, total, onConfirmPayment }: C
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('cash');
   const [paidAmount, setPaidAmount] = useState<string>(total.toString());
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const numericPaidAmount = parseInt(paidAmount) || 0;
   const changeAmount = Math.max(0, numericPaidAmount - total);
-  const canComplete = numericPaidAmount >= total;
+  const canComplete = numericPaidAmount >= total && !isProcessing;
 
-  const handleConfirm = () => {
-    const order = onConfirmPayment(selectedMethod, numericPaidAmount);
-    setCompletedOrder(order);
+  const handleConfirm = async () => {
+    setIsProcessing(true);
+    try {
+      const order = await onConfirmPayment(selectedMethod, numericPaidAmount);
+      setCompletedOrder(order);
+    } catch (error) {
+      console.error('Payment failed:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handlePrint = () => {
