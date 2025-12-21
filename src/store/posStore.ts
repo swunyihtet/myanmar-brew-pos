@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { CartItem, Order, OrderType, OrderStatus, PaymentMethod, SelectedModifier, Product, generateOrderNumber, ShopSettings } from '@/types/pos';
-import { shopSettings as defaultShopSettings } from '@/data/seedData';
+
+const defaultShopSettings: ShopSettings = {
+  name: 'Golden Bean Coffee',
+  address: 'No. 42, Shwedagon Pagoda Road, Yangon',
+  phone: '+95 9 123 456 789',
+  taxEnabled: true,
+  taxRate: 5,
+  taxInclusive: false,
+  receiptHeader: 'Welcome to Golden Bean!',
+  receiptFooter: 'Thank you for visiting!',
+  currency: 'MMK',
+  currencySymbol: 'Ks',
+};
 
 interface POSState {
   // Cart
@@ -27,6 +39,7 @@ interface POSState {
   setCustomerName: (name: string) => void;
   setCustomerPhone: (phone: string) => void;
   setDiscount: (percent: number, fixed: number) => void;
+  setShopSettings: (settings: ShopSettings) => void;
   
   // Order Actions
   createOrder: (paymentMethod: PaymentMethod, paidAmount?: number) => Order;
@@ -106,6 +119,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   setCustomerName: (name) => set({ customerName: name }),
   setCustomerPhone: (phone) => set({ customerPhone: phone }),
   setDiscount: (percent, fixed) => set({ discountPercent: percent, discountFixed: fixed }),
+  setShopSettings: (settings) => set({ shopSettings: settings }),
   
   // Order Actions
   createOrder: (paymentMethod, paidAmount) => {
