@@ -4,10 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { products, categories, shopSettings as defaultSettings } from '@/data/seedData';
+import { useCategories, useProducts, useShopSettings } from '@/hooks/useMenu';
+import { useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import { formatMMK } from '@/types/pos';
-import { Package, Settings, Users, Percent, Receipt, Edit, Trash2 } from 'lucide-react';
+import { Package, Settings, Users, Percent, Receipt, Edit, Trash2, X, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type AdminTab = 'products' | 'settings' | 'users' | 'tax' | 'receipt';
 
@@ -19,9 +30,82 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   { id: 'settings', label: 'Shop Settings', icon: <Settings className="h-5 w-5" /> },
 ];
 
+interface EditingProduct {
+  id: string;
+  name: string;
+  price_mmk: number;
+  is_active: boolean;
+}
+
 const Admin = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
-  const [shopSettings, setShopSettings] = useState(defaultSettings);
+  const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+
+  const { data: products = [], isLoading: productsLoading } = useProducts();
+  const { data: categories = [] } = useCategories();
+  const { data: shopSettingsData } = useShopSettings();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
+
+  const [localShopSettings, setLocalShopSettings] = useState({
+    taxEnabled: true,
+    taxRate: 5,
+    taxInclusive: false,
+    receiptHeader: 'Welcome to Golden Bean!',
+    receiptFooter: 'Thank you for visiting!',
+    name: 'Golden Bean Coffee',
+    address: 'No. 42, Shwedagon Pagoda Road, Yangon',
+    phone: '+95 9 123 456 789',
+  });
+
+  // Sync shop settings from DB when loaded
+  useState(() => {
+    if (shopSettingsData) {
+      setLocalShopSettings({
+        taxEnabled: shopSettingsData.tax_enabled ?? true,
+        taxRate: shopSettingsData.tax_rate ?? 5,
+        taxInclusive: shopSettingsData.tax_inclusive ?? false,
+        receiptHeader: shopSettingsData.receipt_header ?? '',
+        receiptFooter: shopSettingsData.receipt_footer ?? '',
+        name: shopSettingsData.name ?? '',
+        address: shopSettingsData.address ?? '',
+        phone: shopSettingsData.phone ?? '',
+      });
+    }
+  });
+
+  const handleEditClick = (product: typeof products[0]) => {
+    setEditingProduct({
+      id: product.id,
+      name: product.name,
+      price_mmk: product.price_mmk,
+      is_active: product.is_active ?? true,
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingProduct) return;
+    updateProduct.mutate({
+      id: editingProduct.id,
+      name: editingProduct.name,
+      price_mmk: editingProduct.price_mmk,
+      is_active: editingProduct.is_active,
+    }, {
+      onSuccess: () => setEditingProduct(null),
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteProductId) return;
+    deleteProduct.mutate(deleteProductId, {
+      onSuccess: () => setDeleteProductId(null),
+    });
+  };
 
   return (
     <div className="pos-container">
@@ -59,54 +143,118 @@ const Admin = () => {
                 <Button className="btn-touch-sm">+ Add Product</Button>
               </div>
 
-              <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="text-left py-3 px-4 font-medium">Product</th>
-                      <th className="text-left py-3 px-4 font-medium">Category</th>
-                      <th className="text-left py-3 px-4 font-medium">Price</th>
-                      <th className="text-left py-3 px-4 font-medium">Status</th>
-                      <th className="text-right py-3 px-4 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product) => {
-                      const category = categories.find((c) => c.id === product.categoryId);
-                      return (
-                        <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">
-                                {category?.icon}
-                              </span>
-                              <span className="font-medium">{product.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 capitalize">{category?.name}</td>
-                          <td className="py-3 px-4 font-semibold">{formatMMK(product.basePrice)}</td>
-                          <td className="py-3 px-4">
-                            <span className={cn(
-                              'status-badge',
-                              product.isAvailable ? 'status-ready' : 'bg-muted text-muted-foreground'
-                            )}>
-                              {product.isAvailable ? 'Available' : 'Unavailable'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <button className="p-2 hover:bg-muted rounded-lg">
-                              <Edit className="h-4 w-4 text-muted-foreground" />
-                            </button>
-                            <button className="p-2 hover:bg-muted rounded-lg">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              {productsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="bg-card rounded-xl border border-border overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-medium">Product</th>
+                        <th className="text-left py-3 px-4 font-medium">Category</th>
+                        <th className="text-left py-3 px-4 font-medium">Price</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                        <th className="text-right py-3 px-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((product) => {
+                        const category = categories.find((c) => c.id === product.category_id);
+                        const isEditing = editingProduct?.id === product.id;
+
+                        return (
+                          <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">
+                                  {category?.icon || '☕'}
+                                </span>
+                                {isEditing ? (
+                                  <Input
+                                    value={editingProduct.name}
+                                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                    className="w-48"
+                                  />
+                                ) : (
+                                  <span className="font-medium">{product.name}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 capitalize">{category?.name || '-'}</td>
+                            <td className="py-3 px-4">
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  value={editingProduct.price_mmk}
+                                  onChange={(e) => setEditingProduct({ ...editingProduct, price_mmk: parseInt(e.target.value) || 0 })}
+                                  className="w-28"
+                                />
+                              ) : (
+                                <span className="font-semibold">{formatMMK(product.price_mmk)}</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              {isEditing ? (
+                                <Switch
+                                  checked={editingProduct.is_active}
+                                  onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, is_active: checked })}
+                                />
+                              ) : (
+                                <span className={cn(
+                                  'status-badge',
+                                  product.is_active ? 'status-ready' : 'bg-muted text-muted-foreground'
+                                )}>
+                                  {product.is_active ? 'Available' : 'Unavailable'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              {isEditing ? (
+                                <div className="flex items-center justify-end gap-1">
+                                  <button 
+                                    onClick={handleSaveEdit}
+                                    disabled={updateProduct.isPending}
+                                    className="p-2 hover:bg-success/10 rounded-lg"
+                                  >
+                                    {updateProduct.isPending ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                    ) : (
+                                      <Check className="h-4 w-4 text-success" />
+                                    )}
+                                  </button>
+                                  <button 
+                                    onClick={handleCancelEdit}
+                                    className="p-2 hover:bg-muted rounded-lg"
+                                  >
+                                    <X className="h-4 w-4 text-muted-foreground" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={() => handleEditClick(product)}
+                                    className="p-2 hover:bg-muted rounded-lg"
+                                  >
+                                    <Edit className="h-4 w-4 text-muted-foreground" />
+                                  </button>
+                                  <button 
+                                    onClick={() => setDeleteProductId(product.id)}
+                                    className="p-2 hover:bg-destructive/10 rounded-lg"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -124,22 +272,22 @@ const Admin = () => {
                       <p className="text-sm text-muted-foreground">Apply tax to all orders</p>
                     </div>
                     <Switch
-                      checked={shopSettings.taxEnabled}
+                      checked={localShopSettings.taxEnabled}
                       onCheckedChange={(checked) => 
-                        setShopSettings({ ...shopSettings, taxEnabled: checked })
+                        setLocalShopSettings({ ...localShopSettings, taxEnabled: checked })
                       }
                     />
                   </div>
 
-                  {shopSettings.taxEnabled && (
+                  {localShopSettings.taxEnabled && (
                     <>
                       <div className="mb-4">
                         <label className="text-sm font-medium mb-2 block">Tax Rate (%)</label>
                         <Input
                           type="number"
-                          value={shopSettings.taxRate}
+                          value={localShopSettings.taxRate}
                           onChange={(e) => 
-                            setShopSettings({ ...shopSettings, taxRate: parseFloat(e.target.value) || 0 })
+                            setLocalShopSettings({ ...localShopSettings, taxRate: parseFloat(e.target.value) || 0 })
                           }
                           className="w-32"
                         />
@@ -151,9 +299,9 @@ const Admin = () => {
                           <p className="text-sm text-muted-foreground">Prices already include tax</p>
                         </div>
                         <Switch
-                          checked={shopSettings.taxInclusive}
+                          checked={localShopSettings.taxInclusive}
                           onCheckedChange={(checked) => 
-                            setShopSettings({ ...shopSettings, taxInclusive: checked })
+                            setLocalShopSettings({ ...localShopSettings, taxInclusive: checked })
                           }
                         />
                       </div>
@@ -183,9 +331,9 @@ const Admin = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Receipt Header Message</label>
                   <Textarea
-                    value={shopSettings.receiptHeader}
+                    value={localShopSettings.receiptHeader}
                     onChange={(e) => 
-                      setShopSettings({ ...shopSettings, receiptHeader: e.target.value })
+                      setLocalShopSettings({ ...localShopSettings, receiptHeader: e.target.value })
                     }
                     placeholder="Welcome message..."
                     rows={2}
@@ -195,9 +343,9 @@ const Admin = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Receipt Footer Message</label>
                   <Textarea
-                    value={shopSettings.receiptFooter}
+                    value={localShopSettings.receiptFooter}
                     onChange={(e) => 
-                      setShopSettings({ ...shopSettings, receiptFooter: e.target.value })
+                      setLocalShopSettings({ ...localShopSettings, receiptFooter: e.target.value })
                     }
                     placeholder="Thank you message..."
                     rows={2}
@@ -217,9 +365,9 @@ const Admin = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Shop Name</label>
                   <Input
-                    value={shopSettings.name}
+                    value={localShopSettings.name}
                     onChange={(e) => 
-                      setShopSettings({ ...shopSettings, name: e.target.value })
+                      setLocalShopSettings({ ...localShopSettings, name: e.target.value })
                     }
                   />
                 </div>
@@ -227,9 +375,9 @@ const Admin = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Address</label>
                   <Textarea
-                    value={shopSettings.address}
+                    value={localShopSettings.address}
                     onChange={(e) => 
-                      setShopSettings({ ...shopSettings, address: e.target.value })
+                      setLocalShopSettings({ ...localShopSettings, address: e.target.value })
                     }
                     rows={2}
                   />
@@ -238,9 +386,9 @@ const Admin = () => {
                 <div>
                   <label className="text-sm font-medium mb-2 block">Phone</label>
                   <Input
-                    value={shopSettings.phone}
+                    value={localShopSettings.phone}
                     onChange={(e) => 
-                      setShopSettings({ ...shopSettings, phone: e.target.value })
+                      setLocalShopSettings({ ...localShopSettings, phone: e.target.value })
                     }
                   />
                 </div>
@@ -259,13 +407,37 @@ const Admin = () => {
 
               <div className="bg-card rounded-xl border border-border p-6">
                 <p className="text-muted-foreground">
-                  User management requires database connection. Connect to Supabase to enable authentication and role-based access control.
+                  User management requires authentication. Implement login to enable role-based access control.
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteProductId} onOpenChange={(open) => !open && setDeleteProductId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteProduct.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
