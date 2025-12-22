@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/pos/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useCategories, useProducts, useShopSettings } from '@/hooks/useMenu';
-import { useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
+import { useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
+import { useUpdateShopSettings } from '@/hooks/useShopSettings';
 import { formatMMK } from '@/types/pos';
-import { Package, Settings, Users, Percent, Receipt, Edit, Trash2, X, Check, Loader2 } from 'lucide-react';
+import { Package, Settings, Users, Percent, Receipt, Edit, Trash2, X, Check, Loader2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -19,6 +21,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type AdminTab = 'products' | 'settings' | 'users' | 'tax' | 'receipt';
 
@@ -37,16 +52,26 @@ interface EditingProduct {
   is_active: boolean;
 }
 
+interface NewProduct {
+  name: string;
+  price_mmk: number;
+  category_id: string;
+}
+
 const Admin = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const [editingProduct, setEditingProduct] = useState<EditingProduct | null>(null);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProduct, setNewProduct] = useState<NewProduct>({ name: '', price_mmk: 0, category_id: '' });
 
   const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: categories = [] } = useCategories();
   const { data: shopSettingsData } = useShopSettings();
+  const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const updateShopSettings = useUpdateShopSettings();
 
   const [localShopSettings, setLocalShopSettings] = useState({
     taxEnabled: true,
@@ -60,11 +85,11 @@ const Admin = () => {
   });
 
   // Sync shop settings from DB when loaded
-  useState(() => {
+  useEffect(() => {
     if (shopSettingsData) {
       setLocalShopSettings({
         taxEnabled: shopSettingsData.tax_enabled ?? true,
-        taxRate: shopSettingsData.tax_rate ?? 5,
+        taxRate: Number(shopSettingsData.tax_rate) ?? 5,
         taxInclusive: shopSettingsData.tax_inclusive ?? false,
         receiptHeader: shopSettingsData.receipt_header ?? '',
         receiptFooter: shopSettingsData.receipt_footer ?? '',
@@ -73,7 +98,7 @@ const Admin = () => {
         phone: shopSettingsData.phone ?? '',
       });
     }
-  });
+  }, [shopSettingsData]);
 
   const handleEditClick = (product: typeof products[0]) => {
     setEditingProduct({
@@ -104,6 +129,43 @@ const Admin = () => {
     if (!deleteProductId) return;
     deleteProduct.mutate(deleteProductId, {
       onSuccess: () => setDeleteProductId(null),
+    });
+  };
+
+  const handleCreateProduct = () => {
+    if (!newProduct.name || newProduct.price_mmk <= 0) return;
+    createProduct.mutate({
+      name: newProduct.name,
+      price_mmk: newProduct.price_mmk,
+      category_id: newProduct.category_id || undefined,
+    }, {
+      onSuccess: () => {
+        setShowAddProductModal(false);
+        setNewProduct({ name: '', price_mmk: 0, category_id: '' });
+      },
+    });
+  };
+
+  const handleSaveShopSettings = () => {
+    updateShopSettings.mutate({
+      name: localShopSettings.name,
+      address: localShopSettings.address,
+      phone: localShopSettings.phone,
+    });
+  };
+
+  const handleSaveTaxSettings = () => {
+    updateShopSettings.mutate({
+      tax_enabled: localShopSettings.taxEnabled,
+      tax_rate: localShopSettings.taxRate,
+      tax_inclusive: localShopSettings.taxInclusive,
+    });
+  };
+
+  const handleSaveReceiptSettings = () => {
+    updateShopSettings.mutate({
+      receipt_header: localShopSettings.receiptHeader,
+      receipt_footer: localShopSettings.receiptFooter,
     });
   };
 
@@ -140,7 +202,10 @@ const Admin = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-display font-bold">Products</h1>
-                <Button className="btn-touch-sm">+ Add Product</Button>
+                <Button className="btn-touch-sm" onClick={() => setShowAddProductModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
               </div>
 
               {productsLoading ? (
@@ -309,16 +374,12 @@ const Admin = () => {
                   )}
                 </div>
 
-                <div className="bg-card rounded-xl border border-border p-6">
-                  <h3 className="font-semibold mb-4">Discount Settings</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Discounts can be applied at checkout. Configure manager PIN for void/refund operations.
-                  </p>
-                  <div className="mt-4">
-                    <label className="text-sm font-medium mb-2 block">Manager PIN</label>
-                    <Input type="password" placeholder="****" className="w-32" />
-                  </div>
-                </div>
+                <Button onClick={handleSaveTaxSettings} disabled={updateShopSettings.isPending}>
+                  {updateShopSettings.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
@@ -352,7 +413,12 @@ const Admin = () => {
                   />
                 </div>
 
-                <Button className="mt-4">Save Changes</Button>
+                <Button onClick={handleSaveReceiptSettings} disabled={updateShopSettings.isPending}>
+                  {updateShopSettings.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
@@ -393,7 +459,12 @@ const Admin = () => {
                   />
                 </div>
 
-                <Button className="mt-4">Save Changes</Button>
+                <Button onClick={handleSaveShopSettings} disabled={updateShopSettings.isPending}>
+                  {updateShopSettings.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
+                  Save Changes
+                </Button>
               </div>
             </div>
           )}
@@ -407,7 +478,7 @@ const Admin = () => {
 
               <div className="bg-card rounded-xl border border-border p-6">
                 <p className="text-muted-foreground">
-                  User management requires authentication. Implement login to enable role-based access control.
+                  User management is available. Users are assigned roles (cashier, supervisor, admin) when they sign up.
                 </p>
               </div>
             </div>
@@ -438,6 +509,68 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Product Dialog */}
+      <Dialog open={showAddProductModal} onOpenChange={setShowAddProductModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="productName">Product Name</Label>
+              <Input
+                id="productName"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                placeholder="Enter product name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="productPrice">Price (MMK)</Label>
+              <Input
+                id="productPrice"
+                type="number"
+                value={newProduct.price_mmk || ''}
+                onChange={(e) => setNewProduct({ ...newProduct, price_mmk: parseInt(e.target.value) || 0 })}
+                placeholder="Enter price"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="productCategory">Category</Label>
+              <Select
+                value={newProduct.category_id}
+                onValueChange={(value) => setNewProduct({ ...newProduct, category_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowAddProductModal(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateProduct} 
+              disabled={!newProduct.name || newProduct.price_mmk <= 0 || createProduct.isPending}
+            >
+              {createProduct.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Create Product
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
