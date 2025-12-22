@@ -224,9 +224,8 @@ const Index = () => {
 
     const result = await createOrderMutation.mutateAsync(orderInput);
     
-    // Clear cart after successful order
+    // Clear cart after successful order (don't close modal - let CheckoutModal show success)
     clearCart();
-    setCheckoutModalOpen(false);
 
     // Return a compatible order object for the receipt
     return {
