@@ -52,21 +52,25 @@ const ACTIVE_SHOP_ID_KEY = 'pos_active_shop_id';
 export function useAuth(): UserWithRole {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [activeShopId, setActiveShopIdState] = useState<string | null>(
-    localStorage.getItem(ACTIVE_SHOP_ID_KEY)
-  );
+  const [activeShopId, setActiveShopIdState] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(ACTIVE_SHOP_ID_KEY);
+    } catch (e) {
+      console.error('Error reading from localStorage:', e);
+      return null;
+    }
+  });
 
   // Sync activeShopId with localStorage if it changes elsewhere (e.g. login)
   useEffect(() => {
-    const handleStorageChange = () => {
-      const storedId = localStorage.getItem(ACTIVE_SHOP_ID_KEY);
-      if (storedId !== activeShopId) {
-        setActiveShopIdState(storedId);
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === ACTIVE_SHOP_ID_KEY) {
+        setActiveShopIdState(e.newValue);
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [activeShopId]);
+  }, []);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 

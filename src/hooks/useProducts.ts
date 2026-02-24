@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
@@ -18,6 +18,24 @@ interface CreateProductData {
   category_id?: string;
   is_active?: boolean;
   is_popular?: boolean;
+}
+
+export function useProductsList() {
+  const { activeShopId } = useAuth();
+  return useQuery({
+    queryKey: ['products', activeShopId],
+    queryFn: async () => {
+      if (!activeShopId) throw new Error('No active shop ID');
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('shop_id', activeShopId)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!activeShopId,
+  });
 }
 
 export function useCreateProduct() {
