@@ -26,6 +26,7 @@ export function useCreateProduct() {
 
   return useMutation({
     mutationFn: async (data: CreateProductData) => {
+      if (!activeShopId) throw new Error('No active shop ID');
       const { data: product, error } = await supabase
         .from('products')
         .insert({
@@ -58,6 +59,7 @@ export function useUpdateProduct() {
 
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateProductData) => {
+      if (!activeShopId) throw new Error('No active shop ID');
       const { error } = await supabase
         .from('products')
         .update(data)
@@ -82,6 +84,7 @@ export function useDeleteProduct() {
 
   return useMutation({
     mutationFn: async (productId: string) => {
+      if (!activeShopId) throw new Error('No active shop ID');
       const { error } = await supabase
         .from('products')
         .delete()

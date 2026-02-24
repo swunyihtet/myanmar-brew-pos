@@ -93,7 +93,7 @@ export function useAuth(): UserWithRole {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [], isLoading: isRolesLoading } = useQuery({
     queryKey: ['user-roles', user?.id],
     queryFn: () => fetchUserRoles(user!.id),
     enabled: !!user?.id,
@@ -124,7 +124,7 @@ export function useAuth(): UserWithRole {
     role,
     roles,
     activeShopId,
-    isLoading,
+    isLoading: isLoading || isRolesLoading,
     isAdmin: role === 'admin',
     isSupervisor: role === 'supervisor' || role === 'admin',
     setActiveShopId,
