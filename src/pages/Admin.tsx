@@ -10,6 +10,9 @@ import { useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/us
 import { useCreateCategory, useUpdateCategory, useDeleteCategory } from '@/hooks/useCategories';
 import { useUsersWithRoles, useUpdateUserRole } from '@/hooks/useUserManagement';
 import { useUpdateShopSettings } from '@/hooks/useShopSettings';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { formatMMK } from '@/types/pos';
 import { Package, Settings, Users, Percent, Receipt, Edit, Trash2, X, Check, Loader2, Plus, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -101,6 +104,71 @@ const Admin = () => {
   
   const updateUserRole = useUpdateUserRole();
   const updateShopSettings = useUpdateShopSettings();
+
+  const { activeShopId } = useAuth();
+  const [showCreateShop, setShowCreateShop] = useState(false);
+  const [newShopName, setNewShopName] = useState('');
+  const [isCreatingShop, setIsCreatingShop] = useState(false);
+
+  useEffect(() => {
+    if (!activeShopId && !productsLoading && !categoriesLoading) {
+      setShowCreateShop(true);
+    } else {
+      setShowCreateShop(false);
+    }
+  }, [activeShopId, productsLoading, categoriesLoading]);
+
+  const handleCreateInitialShop = async () => {
+    if (!newShopName.trim()) return;
+    setIsCreatingShop(true);
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) throw new Error('User not found');
+
+      // 1. Create shop
+      const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .insert({ 
+          name: newShopName,
+          slug: newShopName.toLowerCase().replace(/\s+/g, '-')
+        })
+        .select()
+        .single();
+
+      if (shopError) throw shopError;
+
+      // 2. Assign admin role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: user.user.id,
+          shop_id: shop.id,
+          role: 'admin'
+        });
+
+      if (roleError) throw roleError;
+
+      // 3. Create default settings
+      const { error: settingsError } = await supabase
+        .from('shop_settings')
+        .insert({
+          shop_id: shop.id,
+          name: newShopName,
+          tax_enabled: true,
+          tax_rate: 5,
+          currency: 'MMK',
+          currency_symbol: 'Ks'
+        });
+
+      if (settingsError) throw settingsError;
+
+      window.location.reload();
+    } catch (error: any) {
+      toast.error('Failed to create shop: ' + error.message);
+    } finally {
+      setIsCreatingShop(false);
+    }
+  };
 
   const [localShopSettings, setLocalShopSettings] = useState({
     taxEnabled: true,
@@ -254,6 +322,35 @@ const Admin = () => {
   return (
     <div className="pos-container">
       <Sidebar />
+
+      {showCreateShop && (
+        <Dialog open={showCreateShop} onOpenChange={() => {}}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Your First Shop</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="shopName">Shop Name</Label>
+                <Input
+                  id="shopName"
+                  value={newShopName}
+                  onChange={(e) => setNewShopName(e.target.value)}
+                  placeholder="e.g. My Awesome Cafe"
+                />
+              </div>
+              <Button 
+                className="w-full" 
+                onClick={handleCreateInitialShop}
+                disabled={!newShopName.trim() || isCreatingShop}
+              >
+                {isCreatingShop ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create Shop & Get Started
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Admin Sidebar */}

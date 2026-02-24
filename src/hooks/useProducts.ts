@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
 
 interface UpdateProductData {
   id: string;
@@ -21,12 +22,14 @@ interface CreateProductData {
 
 export function useCreateProduct() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: CreateProductData) => {
       const { data: product, error } = await supabase
         .from('products')
         .insert({
+          shop_id: activeShopId,
           name: data.name,
           price_mmk: data.price_mmk,
           category_id: data.category_id || null,

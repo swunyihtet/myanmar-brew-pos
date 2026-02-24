@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export interface DbCategory {
   id: string;
@@ -48,20 +49,22 @@ export interface DbShopSettings {
   currency_symbol: string;
 }
 
-async function fetchCategories(): Promise<DbCategory[]> {
+async function fetchCategories(shopId: string): Promise<DbCategory[]> {
   const { data, error } = await supabase
     .from('categories')
     .select('*')
+    .eq('shop_id', shopId)
     .order('sort_order');
   
   if (error) throw error;
   return data || [];
 }
 
-async function fetchProducts(): Promise<DbProduct[]> {
+async function fetchProducts(shopId: string): Promise<DbProduct[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*')
+    .eq('shop_id', shopId)
     .eq('is_active', true)
     .order('name');
   
@@ -69,16 +72,18 @@ async function fetchProducts(): Promise<DbProduct[]> {
   return data || [];
 }
 
-async function fetchModifierSets(): Promise<DbModifierSet[]> {
+async function fetchModifierSets(shopId: string): Promise<DbModifierSet[]> {
   const { data: sets, error: setsError } = await supabase
     .from('modifier_sets')
-    .select('*');
+    .select('*')
+    .eq('shop_id', shopId);
   
   if (setsError) throw setsError;
   
   const { data: modifiers, error: modifiersError } = await supabase
     .from('modifiers')
     .select('*')
+    .eq('shop_id', shopId)
     .eq('is_active', true)
     .order('sort_order');
   
@@ -92,6 +97,8 @@ async function fetchModifierSets(): Promise<DbModifierSet[]> {
 }
 
 async function fetchProductModifierSets(): Promise<Record<string, string[]>> {
+  // Note: product_modifier_sets is a junction table, it doesn't have shop_id 
+  // but it joins products and modifier_sets which are filtered by shop_id
   const { data, error } = await supabase
     .from('product_modifier_sets')
     .select('product_id, modifier_set_id');
@@ -109,11 +116,11 @@ async function fetchProductModifierSets(): Promise<Record<string, string[]>> {
   return mapping;
 }
 
-async function fetchShopSettings(): Promise<DbShopSettings | null> {
+async function fetchShopSettings(shopId: string): Promise<DbShopSettings | null> {
   const { data, error } = await supabase
     .from('shop_settings')
     .select('*')
-    .limit(1)
+    .eq('shop_id', shopId)
     .maybeSingle();
   
   if (error) throw error;
@@ -121,25 +128,31 @@ async function fetchShopSettings(): Promise<DbShopSettings | null> {
 }
 
 export function useCategories() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['categories'],
-    queryFn: fetchCategories,
+    queryKey: ['categories', activeShopId],
+    queryFn: () => fetchCategories(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 export function useProducts() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['products'],
-    queryFn: fetchProducts,
+    queryKey: ['products', activeShopId],
+    queryFn: () => fetchProducts(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useModifierSets() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['modifierSets'],
-    queryFn: fetchModifierSets,
+    queryKey: ['modifierSets', activeShopId],
+    queryFn: () => fetchModifierSets(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -153,9 +166,11 @@ export function useProductModifierSets() {
 }
 
 export function useShopSettings() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['shopSettings'],
-    queryFn: fetchShopSettings,
+    queryKey: ['shopSettings', activeShopId],
+    queryFn: () => fetchShopSettings(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 5 * 60 * 1000,
   });
 }

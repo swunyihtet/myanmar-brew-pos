@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
 
 export interface UpdateShopSettingsInput {
   name?: string;
@@ -13,15 +14,14 @@ export interface UpdateShopSettingsInput {
   receipt_footer?: string;
 }
 
-async function updateShopSettings(input: UpdateShopSettingsInput): Promise<void> {
-  // Get the first (and only) shop settings row
+async function updateShopSettings(input: UpdateShopSettingsInput, shopId: string): Promise<void> {
   const { data: existing, error: fetchError } = await supabase
     .from('shop_settings')
     .select('id')
-    .limit(1)
-    .single();
+    .eq('shop_id', shopId)
+    .maybeSingle();
 
-  if (fetchError && fetchError.code !== 'PGRST116') {
+  if (fetchError) {
     throw fetchError;
   }
 
@@ -32,16 +32,24 @@ async function updateShopSettings(input: UpdateShopSettingsInput): Promise<void>
       .eq('id', existing.id);
 
     if (error) throw error;
+  } else {
+    // Create new settings if they don't exist for this shop
+    const { error } = await supabase
+      .from('shop_settings')
+      .insert({ ...input, shop_id: shopId });
+
+    if (error) throw error;
   }
 }
 
 export function useUpdateShopSettings() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
-    mutationFn: updateShopSettings,
+    mutationFn: (input: UpdateShopSettingsInput) => updateShopSettings(input, activeShopId!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shop-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['shopSettings'] });
       toast.success('Settings saved successfully!');
     },
     onError: (error) => {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
 
 export interface DbOrder {
   id: string;
@@ -18,6 +19,7 @@ export interface DbOrder {
   change_mmk: number;
   created_at: string;
   updated_at: string;
+  shop_id: string;
 }
 
 export interface DbOrderItem {
@@ -69,7 +71,7 @@ export interface CreateOrderInput {
   }[];
 }
 
-async function fetchOrders(): Promise<OrderWithItems[]> {
+async function fetchOrders(shopId: string): Promise<OrderWithItems[]> {
   const { data, error } = await supabase
     .from('orders')
     .select(`
@@ -79,6 +81,7 @@ async function fetchOrders(): Promise<OrderWithItems[]> {
         order_item_modifiers (*)
       )
     `)
+    .eq('shop_id', shopId)
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -86,7 +89,7 @@ async function fetchOrders(): Promise<OrderWithItems[]> {
   return (data || []) as OrderWithItems[];
 }
 
-async function fetchTodayOrders(): Promise<OrderWithItems[]> {
+async function fetchTodayOrders(shopId: string): Promise<OrderWithItems[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -99,6 +102,7 @@ async function fetchTodayOrders(): Promise<OrderWithItems[]> {
         order_item_modifiers (*)
       )
     `)
+    .eq('shop_id', shopId)
     .gte('created_at', today.toISOString())
     .order('created_at', { ascending: false });
 
@@ -106,11 +110,12 @@ async function fetchTodayOrders(): Promise<OrderWithItems[]> {
   return (data || []) as OrderWithItems[];
 }
 
-async function createOrder(input: CreateOrderInput): Promise<DbOrder> {
+async function createOrder(input: CreateOrderInput, shopId: string): Promise<DbOrder> {
   // Insert order
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
+      shop_id: shopId,
       order_type: input.order_type,
       customer_name: input.customer_name || null,
       customer_phone: input.customer_phone || null,
@@ -177,26 +182,31 @@ async function updateOrderStatus(
 }
 
 export function useOrders() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['orders'],
-    queryFn: fetchOrders,
+    queryKey: ['orders', activeShopId],
+    queryFn: () => fetchOrders(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 30 * 1000, // 30 seconds
   });
 }
 
 export function useTodayOrders() {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['orders', 'today'],
-    queryFn: fetchTodayOrders,
+    queryKey: ['orders', 'today', activeShopId],
+    queryFn: () => fetchTodayOrders(activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 30 * 1000,
   });
 }
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
-    mutationFn: createOrder,
+    mutationFn: (input: CreateOrderInput) => createOrder(input, activeShopId!),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(`Order ${order.order_no} created successfully!`);
@@ -228,16 +238,20 @@ export function useUpdateOrderStatus() {
 // Real-time subscription hook
 export function useOrdersRealtime() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   const subscribe = () => {
+    if (!activeShopId) return () => {};
+
     const channel = supabase
-      .channel('orders-changes')
+      .channel(`orders-changes-${activeShopId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'orders',
+          filter: `shop_id=eq.${activeShopId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['orders'] });
