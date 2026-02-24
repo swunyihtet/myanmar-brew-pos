@@ -48,13 +48,15 @@ export function useCreateCategory() {
 
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateCategoryData) => {
       const { error } = await supabase
         .from('categories')
         .update(data)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('shop_id', activeShopId);
 
       if (error) throw error;
     },
@@ -70,13 +72,15 @@ export function useUpdateCategory() {
 
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
     mutationFn: async (categoryId: string) => {
       const { error } = await supabase
         .from('categories')
         .delete()
-        .eq('id', categoryId);
+        .eq('id', categoryId)
+        .eq('shop_id', activeShopId);
 
       if (error) throw error;
     },

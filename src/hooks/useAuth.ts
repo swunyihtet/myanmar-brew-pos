@@ -55,6 +55,18 @@ export function useAuth(): UserWithRole {
   const [activeShopId, setActiveShopIdState] = useState<string | null>(
     localStorage.getItem(ACTIVE_SHOP_ID_KEY)
   );
+
+  // Sync activeShopId with localStorage if it changes elsewhere (e.g. login)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedId = localStorage.getItem(ACTIVE_SHOP_ID_KEY);
+      if (storedId !== activeShopId) {
+        setActiveShopIdState(storedId);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [activeShopId]);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 

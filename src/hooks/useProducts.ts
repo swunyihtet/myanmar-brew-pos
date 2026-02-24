@@ -54,13 +54,15 @@ export function useCreateProduct() {
 
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateProductData) => {
       const { error } = await supabase
         .from('products')
         .update(data)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('shop_id', activeShopId);
 
       if (error) throw error;
     },
@@ -76,13 +78,15 @@ export function useUpdateProduct() {
 
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
+  const { activeShopId } = useAuth();
 
   return useMutation({
     mutationFn: async (productId: string) => {
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', productId);
+        .eq('id', productId)
+        .eq('shop_id', activeShopId);
 
       if (error) throw error;
     },

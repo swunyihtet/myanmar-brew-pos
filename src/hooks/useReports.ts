@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export interface DailyReport {
   totalSales: number;
@@ -10,7 +11,7 @@ export interface DailyReport {
   topItems: { name: string; count: number }[];
 }
 
-async function fetchDailyReport(date: Date): Promise<DailyReport> {
+async function fetchDailyReport(date: Date, shopId: string): Promise<DailyReport> {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   
@@ -30,6 +31,7 @@ async function fetchDailyReport(date: Date): Promise<DailyReport> {
         qty
       )
     `)
+    .eq('shop_id', shopId)
     .gte('created_at', startOfDay.toISOString())
     .lte('created_at', endOfDay.toISOString());
 
@@ -79,16 +81,19 @@ async function fetchDailyReport(date: Date): Promise<DailyReport> {
 }
 
 export function useDailyReport(date: Date = new Date()) {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['report', 'daily', date.toDateString()],
-    queryFn: () => fetchDailyReport(date),
+    queryKey: ['report', 'daily', date.toDateString(), activeShopId],
+    queryFn: () => fetchDailyReport(date, activeShopId!),
+    enabled: !!activeShopId,
     staleTime: 60 * 1000, // 1 minute
   });
 }
 
 export function useDateRangeReport(startDate: Date, endDate: Date) {
+  const { activeShopId } = useAuth();
   return useQuery({
-    queryKey: ['report', 'range', startDate.toDateString(), endDate.toDateString()],
+    queryKey: ['report', 'range', startDate.toDateString(), endDate.toDateString(), activeShopId],
     queryFn: async () => {
       const { data: orders, error } = await supabase
         .from('orders')
@@ -106,6 +111,7 @@ export function useDateRangeReport(startDate: Date, endDate: Date) {
             line_total_mmk
           )
         `)
+        .eq('shop_id', activeShopId)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
         .order('created_at', { ascending: false });
@@ -113,6 +119,7 @@ export function useDateRangeReport(startDate: Date, endDate: Date) {
       if (error) throw error;
       return orders || [];
     },
+    enabled: !!activeShopId,
     staleTime: 60 * 1000,
   });
 }
