@@ -21,6 +21,7 @@ export interface UserWithRole {
   roles: UserRole[];
   activeShopId: string | null;
   isLoading: boolean;
+  isReady: boolean;
   isAdmin: boolean;
   isSupervisor: boolean;
   setActiveShopId: (shopId: string) => void;
@@ -97,20 +98,71 @@ export function useAuth(): UserWithRole {
     return () => subscription.unsubscribe();
   }, [queryClient]);
 
-  const { data: roles = [], isLoading: isRolesLoading } = useQuery({
+  const { data: roles = [], isLoading: isRolesLoading, refetch: refetchRoles } = useQuery({
     queryKey: ['user-roles', user?.id],
     queryFn: () => fetchUserRoles(user!.id),
     enabled: !!user?.id,
   });
 
-  // Automatically select first shop if none selected
+  // Automatically create a shop if user has no roles and is logged in
   useEffect(() => {
-    if (roles.length > 0 && !activeShopId) {
-      const firstShopId = roles[0].shop_id;
-      setActiveShopIdState(firstShopId);
-      localStorage.setItem(ACTIVE_SHOP_ID_KEY, firstShopId);
+    const ensureShopExists = async () => {
+      if (user && !isRolesLoading && roles.length === 0) {
+        console.log('No roles found for user, creating default shop...');
+        const shopName = `${user.user_metadata?.full_name || 'My'}'s Shop`;
+        const slug = `${user.id.slice(0, 8)}-shop`;
+
+        try {
+          // 1. Create the shop
+          const { data: shop, error: shopError } = await supabase
+            .from('shops')
+            .insert({
+              name: shopName,
+              slug: slug,
+              owner_id: user.id
+            })
+            .select()
+            .single();
+
+          if (shopError) throw shopError;
+
+          // 2. Assign admin role
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: user.id,
+              shop_id: shop.id,
+              role: 'admin'
+            });
+
+          if (roleError) throw roleError;
+
+          // 3. Refresh roles
+          refetchRoles();
+        } catch (err) {
+          console.error('Error creating default shop:', err);
+        }
+      }
+    };
+
+    ensureShopExists();
+  }, [user, roles, isRolesLoading, refetchRoles]);
+
+  // Automatically select first shop if none selected OR if current activeShopId is not in roles
+  useEffect(() => {
+    if (roles.length > 0) {
+      const currentShopInRoles = roles.some(r => r.shop_id === activeShopId);
+      if (!activeShopId || !currentShopInRoles) {
+        const firstShopId = roles[0].shop_id;
+        setActiveShopIdState(firstShopId);
+        localStorage.setItem(ACTIVE_SHOP_ID_KEY, firstShopId);
+      }
+    } else if (!isRolesLoading && roles.length === 0 && activeShopId) {
+      // If user has no roles but has an activeShopId (e.g. after a data wipe or role change)
+      setActiveShopIdState(null);
+      localStorage.removeItem(ACTIVE_SHOP_ID_KEY);
     }
-  }, [roles, activeShopId]);
+  }, [roles, activeShopId, isRolesLoading]);
 
   const setActiveShopId = (shopId: string) => {
     setActiveShopIdState(shopId);
@@ -122,6 +174,8 @@ export function useAuth(): UserWithRole {
   const currentRoleObj = roles.find(r => r.shop_id === activeShopId);
   const role = currentRoleObj?.role || null;
 
+  const isReady = !!user && !!activeShopId;
+
   return {
     user,
     session,
@@ -129,6 +183,7 @@ export function useAuth(): UserWithRole {
     roles,
     activeShopId,
     isLoading: isLoading || isRolesLoading,
+    isReady,
     isAdmin: role === 'admin',
     isSupervisor: role === 'supervisor' || role === 'admin',
     setActiveShopId,

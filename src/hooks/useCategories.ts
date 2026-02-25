@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 
@@ -23,7 +23,7 @@ export function useCreateCategory() {
   return useMutation({
     mutationFn: async (data: CreateCategoryData) => {
       if (!activeShopId) throw new Error('No active shop ID');
-      const { data: category, error } = await supabaseAdmin
+      const { data: category, error } = await supabase
         .from('categories')
         .insert({
           shop_id: activeShopId,
@@ -54,7 +54,7 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: async ({ id, ...data }: UpdateCategoryData) => {
       if (!activeShopId) throw new Error('No active shop ID');
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('categories')
         .update(data)
         .eq('id', id)
@@ -79,7 +79,7 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: async (categoryId: string) => {
       if (!activeShopId) throw new Error('No active shop ID');
-      const { error } = await supabaseAdmin
+      const { error } = await supabase
         .from('categories')
         .delete()
         .eq('id', categoryId)

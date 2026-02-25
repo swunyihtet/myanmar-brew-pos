@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 export interface DbCategory {
@@ -50,7 +50,7 @@ export interface DbShopSettings {
 }
 
 async function fetchCategories(shopId: string): Promise<DbCategory[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('categories')
     .select('*')
     .eq('shop_id', shopId)
@@ -61,7 +61,7 @@ async function fetchCategories(shopId: string): Promise<DbCategory[]> {
 }
 
 async function fetchProducts(shopId: string): Promise<DbProduct[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('products')
     .select('*')
     .eq('shop_id', shopId)
@@ -73,14 +73,14 @@ async function fetchProducts(shopId: string): Promise<DbProduct[]> {
 }
 
 async function fetchModifierSets(shopId: string): Promise<DbModifierSet[]> {
-  const { data: sets, error: setsError } = await supabaseAdmin
+  const { data: sets, error: setsError } = await supabase
     .from('modifier_sets')
     .select('*')
     .eq('shop_id', shopId);
   
   if (setsError) throw setsError;
   
-  const { data: modifiers, error: modifiersError } = await supabaseAdmin
+  const { data: modifiers, error: modifiersError } = await supabase
     .from('modifiers')
     .select('*')
     .eq('shop_id', shopId)
@@ -97,7 +97,7 @@ async function fetchModifierSets(shopId: string): Promise<DbModifierSet[]> {
 }
 
 async function fetchProductModifierSets(shopId: string): Promise<Record<string, string[]>> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('product_modifier_sets')
     .select('product_id, modifier_set_id')
     .eq('shop_id', shopId);
@@ -116,7 +116,7 @@ async function fetchProductModifierSets(shopId: string): Promise<Record<string, 
 }
 
 async function fetchShopSettings(shopId: string): Promise<DbShopSettings | null> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from('shop_settings')
     .select('*')
     .eq('shop_id', shopId)

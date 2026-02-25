@@ -9,6 +9,7 @@ import { CheckoutModal } from '@/components/pos/CheckoutModal';
 import { Receipt } from '@/components/pos/Receipt';
 import { useMenu, DbProduct, DbModifierSet } from '@/hooks/useMenu';
 import { useCreateOrder, useOrdersRealtime } from '@/hooks/useOrders';
+import { useAuth } from '@/hooks/useAuth';
 import { usePOSStore } from '@/store/posStore';
 import { Product, SelectedModifier, PaymentMethod, Category, ModifierSet, ShopSettings } from '@/types/pos';
 import { Loader2 } from 'lucide-react';
@@ -52,15 +53,18 @@ const Index = () => {
   const [modifierModalOpen, setModifierModalOpen] = useState(false);
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
 
-  const { categories: dbCategories, products: dbProducts, modifierSets: dbModifierSets, productModifierSets, shopSettings: dbShopSettings, isLoading, error } = useMenu();
+  const { isReady, isLoading: isAuthLoading } = useAuth();
+  const { categories: dbCategories, products: dbProducts, modifierSets: dbModifierSets, productModifierSets, shopSettings: dbShopSettings, isLoading: isMenuLoading, error } = useMenu();
   const createOrderMutation = useCreateOrder();
   const { subscribe } = useOrdersRealtime();
 
   // Subscribe to real-time updates
   useEffect(() => {
-    const unsubscribe = subscribe();
-    return unsubscribe;
-  }, [subscribe]);
+    if (isReady) {
+      const unsubscribe = subscribe();
+      return unsubscribe;
+    }
+  }, [subscribe, isReady]);
 
   const {
     cart,
@@ -252,9 +256,18 @@ const Index = () => {
   // Get the most recent order for receipt printing
   const lastOrder = orders[0];
 
-  if (isLoading) {
+  if (isAuthLoading || !isReady) {
     return (
-      <div className="pos-container items-center justify-center">
+      <div className="pos-container items-center justify-center flex-col">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading session...</p>
+      </div>
+    );
+  }
+
+  if (isMenuLoading) {
+    return (
+      <div className="pos-container items-center justify-center flex-col">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="mt-4 text-muted-foreground">Loading menu...</p>
       </div>
